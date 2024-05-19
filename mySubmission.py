@@ -1,21 +1,9 @@
 '''
 Strategy: Local Search Model with Linked Lists
-
-maxNumDrivers = num loads
-
-1. Each driver will have a LL starting and ending with self
-2. Iteration 1: all drivers will have 1 route inserted into their list.
-3. Iteration 2: merge lists of drivers 1 pair at a time. 
-    > choose pair with smallest trip time. 
-    > Don't exceed 720min
-4. Iteration n: 
-5. Return the iteration with the min difference between the total_drivers and 
-    > This way, the total_cost formula is as small as possible
 '''
 
 import sys
 import math
-import copy
 
 def convertFileToMatrix():
     if len(sys.argv) != 2:
@@ -78,34 +66,95 @@ class LinkedList:
 
 '''
 create a new list with shallow copies
-
-won't be super optimal becauyse I'm just merging all of the routes together that could work. Better soultions are out there but will try to at least get this to
 '''
 def merge2Lists(l1, l2):
-    return 
-    # l1 = l1.head.next
-    # l2 =l2.head.next
-    # tail = dummy = DistanceNode(-1)
-            
-    # while l1.next and l2.next:
-    #     # check if addition of eulicedan distance from 1 end coord to the other start coord is < 720
 
-    # #     if l1.val < l2.val:
-    # #         tail.next = l1
-    # #         l1 = l1.next
-    # #     else:
-    # #         tail.next = l2
-    # #         l2 = l2.next
-    # #     tail = tail.next
-    
-    # # if l1 != None:
-    # #     tail.next = l1
-    # # if l2 != None:
-    # #     tail.next = l2
-    
-    # return dummy.next
+    '''
+    How to determine which node goes first:
 
-# total_cost = 500*number_of_drivers + total_number_of_driven_minutes
+    the eulic distance from the previous node. Which ever has a smaller distance goes first
+    '''
+    def shallow_copy_node(node):
+        return DistanceNode(node.load_id, node.start_coord, node.end_coord)
+    
+    l1 = l1.head.next
+    l2 = l2.head.next    
+
+    # Create a dummy node to hold the new merged list
+    merged_head = merged_tail = DistanceNode(0)
+    previous_end_coord = (0, 0)  # Initialize with the start coordinates of the dummy node
+
+    # Traverse both lists and merge based on euclidean distance
+    while l1.next and l2.next:
+        # Create shallow copies of the nodes
+        node1 = shallow_copy_node(l1)
+        node2 = shallow_copy_node(l2)
+
+        # Calculate euclidean distances from previous node's end_coord
+        distance_from_prev_n1 = euclideanDistance(previous_end_coord, node1.start_coord)
+        distance_from_prev_n2 = euclideanDistance(previous_end_coord, node2.start_coord)
+
+        # Choose the node with smaller euclidean distance
+        if distance_from_prev_n1 < distance_from_prev_n2:
+            # Update accumulated time
+            node1.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node1.start_coord)
+            # print('new acc time: ', node1.accumulated_time)
+            merged_tail.next = node1
+            l1 = l1.next
+            merged_tail = merged_tail.next                 
+            # print('new merge tail acc time: ', merged_tail.accumulated_time)
+        else:
+            # Update accumulated time
+            node2.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node2.start_coord)
+            # print('new acc time: ', node2.accumulated_time)
+            merged_tail.next = node2
+            l2 = l2.next
+            merged_tail = merged_tail.next
+            # print('new merge tail acc time: ', merged_tail.accumulated_time)
+        
+        # Update previous end coordinates
+        previous_end_coord = merged_tail.end_coord
+
+    # print('############new merge tail acc time: ', merged_tail.accumulated_time)
+
+    # Append the remaining nodes from l1 or l2 if any
+    while l1.next:
+        node = shallow_copy_node(l1)
+        node.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node.start_coord)
+
+        merged_tail.next = node
+        l1 = l1.next
+        merged_tail = merged_tail.next
+    
+    while l2.next:
+        node = shallow_copy_node(l2)
+        node.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node.start_coord)
+
+        merged_tail.next = node
+        l2 = l2.next
+        merged_tail = merged_tail.next
+
+    # merged_tail.next = l1 if l1.next else l2
+    # print('*******new merge tail acc time: ', merged_tail.accumulated_time)
+
+
+    # Create new LL
+    res_ll = LinkedList(0)
+    res_ll.head.next = merged_head.next
+    # print()
+    # print('this is merged_tail acc time', merged_tail.accumulated_time, )
+    merged_tail.next = res_ll.tail
+
+    
+    # complete round trip
+    res_ll.tail.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, res_ll.tail.start_coord)
+    
+    return res_ll
+
+
+'''
+total_cost = 500*number_of_drivers + total_number_of_driven_minutes
+'''
 def getCost(driversList):
     num_drivers, total_min = len(driversList.keys()), 0
     for ll in driversList.values():
@@ -134,12 +183,6 @@ def solution():
     min_total_cost = float('inf') # gets current total cost of drivers list 
     solution = []
 
-    '''
-    iteration == merge smallest lists together
-
-    While current iteration results in a new min total cost:
-        For each list, get it's accumulated cost and find the next list with the lowest cost. If the sum of their accumlated costs < 720 add it 
-    '''
     while getCost(driverLists) < min_total_cost:
         # track best solution found so far
         solution = [ll.getArrList() for ll in driverLists.values()]
@@ -148,23 +191,24 @@ def solution():
         # go through all driver lists, merge the valid ones
         drivers_to_delete = []
         for driver_id, ll_1 in driverLists.items():
-            # find next driver with smallest route time            
-            lowest_cost_driver_id, lowest_route_time = -1, float('inf')
-            for other_driver_id, ll_2 in driverLists.items():                                
-                # track if driver 1 and 2 are not the same, and the other route has the lowest time so far
-                ll_2_route_time = ll_2.tail.accumulated_time
-                if driver_id != other_driver_id and ll_2_route_time < lowest_route_time:
-                    lowest_cost_driver_id = other_driver_id
-                    lowest_route_time = ll_2_route_time
-                    
-            # if a valid list has been found, try merging it with the 1st driver list
-            if lowest_cost_driver_id != -1:
-                resulting_merge = merge2Lists(driverLists[driver_id], driverLists[lowest_cost_driver_id])
-                # only keep merge if roundtrip time is <= 720
-                if resulting_merge.tail.accumulated_time <= 720:     
-                    driverLists[driver_id] = resulting_merge
-                    drivers_to_delete.append(lowest_cost_driver_id)
-        
+            if driver_id not in drivers_to_delete:  # Check if driver has been marked for deletion
+                # find next driver with smallest route time            
+                lowest_cost_driver_id, lowest_route_time = -1, float('inf')
+                for other_driver_id, ll_2 in driverLists.items():                                
+                    # track if driver 1 and 2 are not the same, and the other route has the lowest time so far
+                    ll_2_route_time = ll_2.tail.accumulated_time
+                    if driver_id != other_driver_id and ll_2_route_time < lowest_route_time:
+                        lowest_cost_driver_id = other_driver_id
+                        lowest_route_time = ll_2_route_time
+                        
+                # if a valid list has been found, try merging it with the 1st driver list
+                if lowest_cost_driver_id != -1:
+                    resulting_merge = merge2Lists(driverLists[driver_id], driverLists[lowest_cost_driver_id])
+                    # only keep merge if roundtrip time is <= 720
+                    if lowest_cost_driver_id not in drivers_to_delete and resulting_merge.tail.accumulated_time <= 720:
+                        driverLists[driver_id] = resulting_merge
+                        drivers_to_delete.append(lowest_cost_driver_id)
+
         # delete drivers that had their list merged
         for id in drivers_to_delete:
             del driverLists[id]
