@@ -77,7 +77,7 @@ class LinkedList:
 Compares euclidean distances when merge
 """
 def merge2Lists(l1, l2):
-
+    
     def shallow_copy_node(node):
         return DistanceNode(node.load_id, node.start_coord, node.end_coord)
     
@@ -100,13 +100,13 @@ def merge2Lists(l1, l2):
         # Choose the node with smaller euclidean distance
         if distance_from_prev_n1 < distance_from_prev_n2:
             # Update accumulated time
-            node1.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node1.start_coord)
+            node1.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node1.start_coord) + euclideanDistance(node1.start_coord, node1.end_coord)
             merged_tail.next = node1
             l1 = l1.next
             merged_tail = merged_tail.next                 
         else:
             # Update accumulated time
-            node2.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node2.start_coord)
+            node2.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node2.start_coord) + euclideanDistance(node2.start_coord, node2.end_coord)
             merged_tail.next = node2
             l2 = l2.next
             merged_tail = merged_tail.next
@@ -116,7 +116,7 @@ def merge2Lists(l1, l2):
     # Append the remaining nodes from l1 or l2 if any
     while l1.next:
         node = shallow_copy_node(l1)
-        node.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node.start_coord)
+        node.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node.start_coord) + euclideanDistance(node.start_coord, node.end_coord)
 
         merged_tail.next = node
         l1 = l1.next
@@ -124,7 +124,7 @@ def merge2Lists(l1, l2):
     
     while l2.next:
         node = shallow_copy_node(l2)
-        node.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node.start_coord)
+        node.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, node.start_coord) + euclideanDistance(node.start_coord, node.end_coord)
 
         merged_tail.next = node
         l2 = l2.next
@@ -137,7 +137,7 @@ def merge2Lists(l1, l2):
     
     # complete round trip
     res_ll.tail.accumulated_time = merged_tail.accumulated_time + euclideanDistance(merged_tail.end_coord, res_ll.tail.start_coord)
-    
+        
     return res_ll
 
 def solution():    
@@ -181,11 +181,11 @@ def solution():
                         
                 # if a valid list has been found, try merging it with the 1st driver list
                 if lowest_cost_driver_id != -1:
-                    resulting_merge = merge2Lists(driverLists[driver_id], driverLists[lowest_cost_driver_id])
+                    resulting_merge = merge2Lists(driverLists[driver_id], driverLists[lowest_cost_driver_id])                                            
                     # only keep merge if roundtrip time is <= 720
-                    if lowest_cost_driver_id not in drivers_to_delete and resulting_merge.tail.accumulated_time <= 720:
+                    if lowest_cost_driver_id not in drivers_to_delete and resulting_merge.tail.accumulated_time <= 720:                        
                         driverLists[driver_id] = resulting_merge
-                        drivers_to_delete.append(lowest_cost_driver_id)
+                        drivers_to_delete.append(lowest_cost_driver_id)                    
 
         # delete drivers that had their list merged
         for id in drivers_to_delete:
